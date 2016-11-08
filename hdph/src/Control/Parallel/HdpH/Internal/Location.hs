@@ -179,5 +179,6 @@ dbgGRef      = 9  -- registry update
 -----------------------------------------------------------------------------
 -- missing (orphan) instances for NT.EndPointAddress
 
-deriving instance NFData NT.EndPointAddress
+--not needed anymore:
+--deriving instance NFData NT.EndPointAddress
 deriving instance Serialize NT.EndPointAddress
