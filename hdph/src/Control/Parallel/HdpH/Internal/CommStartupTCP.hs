@@ -8,7 +8,7 @@
 module Control.Parallel.HdpH.Internal.CommStartupTCP
   ( startupTCP ) where
 
-import Control.Applicative(<$>)
+import Control.Applicative((<$>))
 import Control.Monad (forM_, replicateM)
 import Control.Concurrent (threadDelay)
 
