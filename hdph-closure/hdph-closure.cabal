@@ -23,8 +23,8 @@ Flag BuildTest
 
 Library
   exposed-modules: Control.Parallel.HdpH.Closure,
-                   Control.Parallel.HdpH.Closure.Internal
-  other-modules:   Control.Parallel.HdpH.Closure.Static,
+                   Control.Parallel.HdpH.Closure.Internal,
+                   Control.Parallel.HdpH.Closure.Static,
                    Control.Parallel.HdpH.Closure.Static.State,
                    Control.Parallel.HdpH.Closure.Static.Type
   build-depends:   template-haskell,
