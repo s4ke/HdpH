@@ -2,6 +2,7 @@
 --
 -- Author: Patrick Maier
 -----------------------------------------------------------------------------
+{-# LANGUAGE FlexibleInstances #-}
 
 module Control.Parallel.HdpH.Internal.Type.Par
   ( -- * Par monad, threads and sparks
@@ -32,7 +33,7 @@ import qualified Data.Binary as DB
 
 -- 'ParM m' is a continuation monad, specialised to the return type 'Thread m';
 -- 'm' abstracts a monad encapsulating the underlying state.
-newtype ParM m a = Par { unPar :: (a -> Thread m) -> Thread m }
+newtype ParM m a = Par { unPar :: (a -> Thread m) -> Thread m } deriving (Typeable)
 
 instance Functor (ParM m) where
     fmap f p = Par $ \ c -> unPar p (c . f)
@@ -69,7 +70,7 @@ type Spark m = Serialized (ParM m ())
 instance NFData (Serialized a) where
     rnf _ = ()
 
-instance (Typeable a) => Serialize (Serialized a) where
+instance (Typeable m) => Serialize (Serialized (ParM m ())) where
     put serialized = putLazyByteString (DB.encode serialized)
     get = do bytesLeft <- remaining
              byteString <- getByteString bytesLeft
