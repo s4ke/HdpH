@@ -4,11 +4,12 @@ flags:
   time-locale-compat:
     old-locale: false
 packages:
-- hdph-closure/
 - hdph/
 - location:
-    git: git@github.com:haskell-distributed/network-transport-tcp.git
-    commit: c2a316dc93a6d666e5cae61d5676f6a3ec5a7f83
+    git: https://github.com/haskell-distributed/network-transport-tcp
+    #commit: c2a316dc93a6d666e5cae61d5676f6a3ec5a7f83
+    commit: f4b51dd73e2786faa0f07f82118249e432fee2bc
+  extra-dep: true
 extra-deps:
 - Glob-0.7.13
 - MonadPrompt-1.0.0.5
@@ -28,6 +29,7 @@ extra-deps:
 - cassava-0.4.5.1
 - cereal-0.4.1.1
 - clock-0.5.2
+- packman-0.3.0
 - code-page-0.1.1
 - comonad-5
 - contravariant-1.4

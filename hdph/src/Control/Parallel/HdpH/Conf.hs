@@ -140,10 +140,12 @@ data RTSConf =
         -- use this as the first steal candidate as it is likely to be a source
         -- of work?
 
-    useLowWatermarkOptimisation :: Bool
+    useLowWatermarkOptimisation :: Bool,
         -- ^ Should HdpH try to fish when there are less than 'maxFish'
         --   sparks left or should it wait until it finds no work before
         --   performing a fish?
+
+    serializeBufferSize :: Int
 
     }
     deriving (Show)  -- for testing
@@ -170,7 +172,8 @@ defaultRTSConf =
     startupPort    = "",
     startupTimeout = 10,        -- default (TCP) startup timeout
     useLastStealOptimisation    = True, -- Optimisations on by default.
-    useLowWatermarkOptimisation = True
+    useLowWatermarkOptimisation = True,
+    serializeBufferSize = 10 * 2^20 -- 10MB
     }
 
 -- StartupBackends

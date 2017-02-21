@@ -5,7 +5,6 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}  -- for 'GIVar' and 'Node'
 {-# LANGUAGE FlexibleInstances #-}           -- for some 'ToClosure' instances
-{-# LANGUAGE TemplateHaskell #-}             -- for 'mkClosure', etc.
 
 module Control.Parallel.HdpH
   ( -- $Intro
@@ -52,9 +51,6 @@ module Control.Parallel.HdpH
     GIVar,
     at,        -- :: GIVar a -> Node
 
-    -- * Explicit Closures
-    module Control.Parallel.HdpH.Closure,
-
     -- * Distances
     module Control.Parallel.HdpH.Dist,
 
@@ -77,8 +73,6 @@ import Data.Serialize (Serialize)
 import Data.Time.Clock (NominalDiffTime, diffUTCTime, getCurrentTime)
 
 import Control.Parallel.HdpH.Conf                            -- re-export whole module
-import Control.Parallel.HdpH.Closure hiding (declareStatic)  -- re-export almost whole module
-import qualified Control.Parallel.HdpH.Closure as Closure (declareStatic)
 import Control.Parallel.HdpH.Dist                            -- re-export whole module
 import qualified Control.Parallel.HdpH.Internal.Comm as Comm
        (myNode, isRoot, equiDistBases)
@@ -345,11 +339,11 @@ myNode = Node <$> (atom $ const $ liftIO $ Comm.myNode)
 --   runtime system, where the head of the list is the current node.
 --   This operation may query all nodes, which may incur significant latency.
 allNodes :: Par [Node]
-allNodes = unClosure <$> allNodesWithin one
+allNodes = deserial <$> allNodesWithin one
 
 -- | Returns a list of all nodes within the given distance around the
 --   current node (which is the head of the list).
-allNodesWithin :: Dist -> Par (Closure [Node])
+allNodesWithin :: Dist -> Par (Serialized [Node])
 allNodesWithin r = do
   let half_r = div2 r
   (this,near_size):rest_basis <- equiDist r
@@ -358,17 +352,17 @@ allNodesWithin r = do
           if n > 1
             then do -- remote recurive call
                     gv <- glob v
-                    pushTo $(mkClosure [| allNodesWithin_abs (half_r, gv) |]) q
-            else put v $ toClosure [q]
+                    pushTo (serial $ allNodesWithin_abs (half_r, gv)) q
+            else put v $ serial [q]
           return v
   near_nodes <-
     if near_size > 1
-      then unClosure <$> allNodesWithin half_r  -- local recursive call
+      then deserial <$> allNodesWithin half_r  -- local recursive call
       else return [this]
-  rest_nodes <- mapM (fmap unClosure . get) vs
-  return $ toClosure $ concat (near_nodes : rest_nodes)
+  rest_nodes <- mapM (fmap deserial . get) vs
+  return $ serial $ concat (near_nodes : rest_nodes)
 
-allNodesWithin_abs :: (Dist, GIVar (Closure [Node])) -> Thunk (Par ())
+allNodesWithin_abs :: (Dist, GIVar (Serialized [Node])) -> Thunk (Par ())
 allNodesWithin_abs (half_r, gv) = Thunk $ allNodesWithin half_r >>= rput gv
               
 -- | Returns an equidistant basis of radius 'r' around the current node.
@@ -390,37 +384,37 @@ fork = atom . const . liftThreadM . putThread . mkThread
 -- | Creates a spark, to be available for work stealing.
 -- The spark may be converted into a thread and executed locally, or it may
 -- be stolen by another node and executed there.
-spark :: Dist -> Closure (Par ()) -> Par ()
+spark :: Dist -> Serialized (Par ()) -> Par ()
 {-# INLINE spark #-}
 spark r clo = atom $ const $ schedulerID >>= \ i ->
                              liftSparkM $ putLocalSpark i r clo
 
 -- | Pushes a computation to the given node, where it is eagerly converted
 -- into a thread and executed.
-pushTo :: Closure (Par ()) -> Node -> Par ()
+pushTo :: Serialized (Par ()) -> Node -> Par ()
 {-# INLINE pushTo #-}
 pushTo clo (Node n) = atom $ const $ sendPUSH clo n
 
 -- | Included for compatibility with PLDI paper; 
 --   Sparkpool should be redesigned to avoid use 'mkClosure' here
-spawn :: Dist -> Closure (Par (Closure a)) -> Par (IVar (Closure a))
+spawn :: Dist -> Serialized (Par (Serialized a)) -> Par (IVar (Serialized a))
 spawn r clo = do
   v <- new
   gv <- glob v
-  spark r $(mkClosure [| spawn_abs (clo, gv) |])
+  spark r (serial $ spawn_abs (clo, gv))
   return v
 
 -- | Included for compatibility with PLDI paper;
 --   Message handler should be redesigned to avoid use 'mkClosure' here
-spawnAt :: Node -> Closure (Par (Closure a)) -> Par (IVar (Closure a))
+spawnAt :: Node -> Serialized (Par (Serialized a)) -> Par (IVar (Serialized a))
 spawnAt q clo = do
   v <- new
   gv <- glob v
-  pushTo $(mkClosure [| spawn_abs (clo, gv) |]) q
+  pushTo (serial $ spawn_abs (clo, gv)) q
   return v
 
-spawn_abs :: (Closure (Par (Closure a)), GIVar (Closure a)) -> Thunk (Par ())
-spawn_abs (clo, gv) = Thunk $ unClosure clo >>= rput gv
+spawn_abs :: (Serialized(Par (Serializeda)), GIVar (Serialized a)) -> Thunk (Par ())
+spawn_abs (clo, gv) = Thunk $ deserial clo >>= rput gv
 
 -- | Creates a new empty IVar.
 new :: Par (IVar a)
@@ -452,19 +446,19 @@ probe (IVar v) = atom $ const $ liftIO (probeIVar v)
 
 -- | Globalises given IVar, returning a globally unique handle;
 -- this operation is restricted to IVars of 'Closure' type.
-glob :: IVar (Closure a) -> Par (GIVar (Closure a))
+glob :: IVar (Serialized a) -> Par (GIVar (Serialized a))
 {-# INLINE glob #-}
 glob (IVar v) =
   GIVar <$> (atom $ const $ schedulerID >>= \ i -> liftIO $ globIVar i v)
 
 -- | Writes to (possibly remote) IVar denoted by given global handle;
 -- this operation is restricted to write values of 'Closure' type.
-rput :: GIVar (Closure a) -> Closure a -> Par ()
+rput :: GIVar (Serialized a) -> Serialized a -> Par ()
 {-# INLINE rput #-}
-rput gv clo = pushTo $(mkClosure [| rput_abs (gv, clo) |]) (at gv)
+rput gv clo = pushTo (serial $ rput_abs (gv, clo)) (at gv)
 
 -- write to locally hosted global IVar; don't export
-rput_abs :: (GIVar (Closure a), Closure a) -> Thunk (Par ())
+rput_abs :: (GIVar (Serialized a), Serialized a) -> Thunk (Par ())
 {-# INLINE rput_abs #-}
 rput_abs (GIVar gv, clo) =
   Thunk $ atomMayInjectHi $ const $
@@ -477,26 +471,3 @@ rput_abs (GIVar gv, clo) =
 stub :: Par () -> Par ()
 {-# INLINE stub #-}
 stub = atom . const . void . forkStub . execThread . mkThread
-
-
------------------------------------------------------------------------------
--- Static declaration (must be at end of module)
-
--- Empty splice; TH hack to make all environment abstractions visible.
-$(return [])
-
-instance ToClosure [Node] where locToClosure = $(here)
-
--- | Static declaration of Static deserialisers used in explicit Closures
--- created or imported by this module.
--- This Static declaration must be imported by every main module using HdpH.
--- The imported Static declaration must be combined with the main module's own
--- Static declaration and registered; failure to do so may abort the program
--- at runtime.
-declareStatic :: StaticDecl
-declareStatic = mconcat
-  [Closure.declareStatic,
-   declare (staticToClosure :: StaticToClosure [Node]),
-   declare $(static 'allNodesWithin_abs),
-   declare $(static 'spawn_abs),
-   declare $(static 'rput_abs)]

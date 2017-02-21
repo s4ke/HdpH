@@ -35,7 +35,9 @@ import Control.Monad (unless, when, void)
 import qualified Data.ByteString.Lazy as BS
 import Data.Functor ((<$>))
 
-import Control.Parallel.HdpH.Closure (unClosure)
+import GHC.Packing.Type
+import Control.Parallel.HdpH.SerialUtil(deserial)
+
 import Control.Parallel.HdpH.Conf (RTSConf(scheds, wakeupDly))
 import qualified Control.Parallel.HdpH.Internal.Comm as Comm
        (myNode, allNodes, isRoot, send, receive, withCommDo)
@@ -222,7 +224,7 @@ getThread = do
     Nothing     -> do
       maybe_spark <- liftSparkM $ getLocalSpark schedID
       case maybe_spark of
-        Just spark -> return $ mkThread $ unClosure spark
+        Just spark -> return $ mkThread $ deserial spark
         Nothing    -> liftSparkM blockSched >> getThread
 
 
@@ -263,7 +265,7 @@ sendPUSH spark target = do
   if target == here
     then do
       -- short cut PUSH msg locally
-      execHiThread $ mkThread $ unClosure spark
+      execHiThread $ mkThread $ serial spark
     else do
       -- construct and send PUSH message
       let msg = PUSH spark :: Msg RTS
@@ -275,7 +277,7 @@ sendPUSH spark target = do
 -- Handle a PUSH message by converting the spark into a high priority thread
 -- and executing it immediately.
 handlePUSH :: Msg RTS -> RTS ()
-handlePUSH (PUSH spark) = execHiThread $ mkThread $ unClosure spark
+handlePUSH (PUSH spark) = execHiThread $ mkThread $ deserial spark
 handlePUSH _ = error "panic in handlePUSH: not a PUSH message"
 
 
