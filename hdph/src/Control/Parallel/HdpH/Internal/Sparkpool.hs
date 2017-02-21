@@ -82,6 +82,8 @@ import Control.Parallel.HdpH.Internal.Topology (dist)
 import Control.Parallel.HdpH.Internal.Misc (encodeLazy, ActionServer, reqAction)
 import Control.Parallel.HdpH.Internal.Type.Par (Spark)
 
+import Data.Typeable.Internal (Typeable)
+
 
 
 -----------------------------------------------------------------------------
@@ -317,7 +319,7 @@ maySCHEDULE = do
 -- Get a spark from the back of a spark pool with minimal radius, if any exists;
 -- possibly send a FISH message and update stats (ie. count sparks converted);
 -- the scheduler ID argument may be used for logging.
-getLocalSpark :: Int -> SparkM m (Maybe (Spark m))
+getLocalSpark :: (Typeable m) => Int -> SparkM m (Maybe (Spark m))
 getLocalSpark schedID = do
   -- select local spark, starting with smallest radius
   r_min <- liftIO getMinDistIO
@@ -365,7 +367,7 @@ putRemoteSpark _schedID r spark = do
 -- HdpH messages (peer to peer)
 
 -- 5 different types of messages dealing with fishing and pushing sparks
-data Msg m = TERM        -- termination message (broadcast from root and back)
+data (Typeable m) => Msg m = TERM        -- termination message (broadcast from root and back)
                !Node       -- root node
            | FISH        -- thief looking for work
                !Node       -- thief
@@ -380,6 +382,7 @@ data Msg m = TERM        -- termination message (broadcast from root and back)
                !Node       -- victim
            | PUSH        -- eagerly pushing work
                (Spark m)   -- spark
+           deriving (Typeable)
 
 -- Invariants for 'FISH thief avoid candidates sources fwd :: Msg m':
 -- * Lists 'candidates' and 'sources' are sorted in order of ascending
@@ -394,7 +397,7 @@ data Msg m = TERM        -- termination message (broadcast from root and back)
 --   into one packet).
 
 -- Show instance (mainly for debugging)
-instance Show (Msg m) where
+instance (Typeable m) => Show (Msg m) where
   showsPrec _ (TERM root)                = showString "TERM(" . shows root .
                                            showString ")"
   showsPrec _ (FISH thief avoid candidates sources fwd)
@@ -411,7 +414,7 @@ instance Show (Msg m) where
   showsPrec _ (PUSH _spark)              = showString "PUSH(_)"
 
 
-instance NFData (Msg m) where
+instance (Typeable m) => NFData (Msg m) where
   rnf (TERM _root)                                = ()
   rnf (FISH _thief avoid candidates sources _fwd) = rnf avoid `seq`
                                                     rnf candidates `seq`
@@ -422,7 +425,7 @@ instance NFData (Msg m) where
 
 
 -- TODO: Derive this instance.
-instance Serialize (Msg m) where
+instance (Typeable m) => Serialize (Msg m) where
   put (TERM root)               = Data.Serialize.put (0 :: Word8) >>
                                   Data.Serialize.put root
   put (FISH thief avoid candidates sources fwd)
@@ -501,7 +504,7 @@ goFISHing r_min = do
 -- assumes pools at radius < r_min are empty, and all pools are empty if
 -- r_min == zero; the FISH victim is one of minimal distance, selected
 -- according to the 'selectFirstVictim' policy.
-sendFISH :: Dist -> SparkM m ()
+sendFISH :: (Typeable m) => Dist -> SparkM m ()
 sendFISH r_min = do
   -- check whether a FISH message should be sent
   go <- goFISHing r_min

@@ -20,7 +20,8 @@ Library
                    Control.Parallel.HdpH.Conf,
                    Control.Parallel.HdpH.Dist
                    --Control.Parallel.HdpH.Strategies
-  other-modules:   Control.Parallel.HdpH.Internal.Comm,
+  other-modules:   Control.Parallel.HdpH.SerialUtil,
+                   Control.Parallel.HdpH.Internal.Comm,
                    Control.Parallel.HdpH.Internal.CommStartupTCP,
                    Control.Parallel.HdpH.Internal.CommStartupUDP,
                    Control.Parallel.HdpH.Internal.Data.CacheMap.Strict,
@@ -60,7 +61,8 @@ Library
                    time >= 1.2 && < 2,
                    unix >= 2.6 && < 2.8,
                    unordered-containers >= 0.1 && < 1,
-                   packman >= 0.3 && < 0.4
+                   packman >= 0.3 && < 0.4,
+                   binary >= 0.7.5.0 && < 0.8
   hs-source-dirs:  src
   ghc-options:     -Wall
 

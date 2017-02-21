@@ -11,6 +11,7 @@ packages:
     commit: f4b51dd73e2786faa0f07f82118249e432fee2bc
   extra-dep: true
 extra-deps:
+- binary-0.7.5.0
 - Glob-0.7.13
 - MonadPrompt-1.0.0.5
 - MonadRandom-0.4.2.3

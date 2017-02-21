@@ -15,8 +15,14 @@ import Prelude
 import Control.Applicative (Applicative, pure, (<*>))
 import Control.Monad (ap)
 
-import GHC.Packing.Core
+import Control.Parallel.HdpH.SerialUtil
 import GHC.Packing.Type
+
+import Control.DeepSeq
+import Data.Serialize
+import Data.Typeable.Internal (Typeable)
+import Data.ByteString.Lazy (fromStrict)
+import qualified Data.Binary as DB
 
 
 -----------------------------------------------------------------------------
@@ -58,4 +64,14 @@ data ThreadCont m = ThreadCont ![Thread m] (Thread m)
 
 -- A spark is a 'Par' comp returning '()', wrapped into an explicit closure.
 type Spark m = Serialized (ParM m ())
+
+-- FIXME: is this correct?
+instance NFData (Serialized a) where
+    rnf _ = ()
+
+instance (Typeable a) => Serialize (Serialized a) where
+    put serialized = putLazyByteString (DB.encode serialized)
+    get = do bytesLeft <- remaining
+             byteString <- getByteString bytesLeft
+             return (DB.decode $ fromStrict byteString)
 
