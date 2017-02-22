@@ -1,9 +1,5 @@
-Haskell Distributed Parallel Haskell (without Closures)
+Haskell Distributed Parallel Haskell
 =======================================================
-This is a fork of HdpH that doesn't use Closures for "serialization" of the
-functions. Instead, it uses packman to be able to serialize **arbitrary functions**.
-This currently only ships with minor Strategy support as this was primarily developed
-to be a usable backend for [Parrows](https://github.com/s4ke/Parrows).
 
 **Haskell distributed parallel Haskell (HdpH)** is a Haskell DSL for
 parallel computation on distributed-memory architectures. HdpH is
