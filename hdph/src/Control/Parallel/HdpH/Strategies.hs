@@ -19,6 +19,8 @@ module Control.Parallel.HdpH.Strategies
     ProtoStrategy,
     sparkClosure,
 
+    forceCC,
+
     -- * Strategies for lists
     evalList,
     parClosureList
