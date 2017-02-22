@@ -19,9 +19,9 @@ Library
   exposed-modules: Control.Parallel.HdpH,
                    Control.Parallel.HdpH.Conf,
                    Control.Parallel.HdpH.Dist,
-                   Control.Parallel.HdpH.Strategies
-  other-modules:   Control.Parallel.HdpH.SerialUtil,
-                   Control.Parallel.HdpH.Internal.Comm,
+                   Control.Parallel.HdpH.Strategies,
+                   Control.Parallel.HdpH.SerialUtil
+  other-modules:   Control.Parallel.HdpH.Internal.Comm,
                    Control.Parallel.HdpH.Internal.CommStartupTCP,
                    Control.Parallel.HdpH.Internal.CommStartupUDP,
                    Control.Parallel.HdpH.Internal.Data.CacheMap.Strict,
