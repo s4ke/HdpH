@@ -109,6 +109,12 @@ sparkClosure_abs :: (Serialized a,
 sparkClosure_abs (clo, clo_strat, gv) =
   (clo `using` deserial clo_strat) >>= rput gv
 
+
+forceCC :: (NFData a) => Serialized (Strategy (Serialized a))
+forceCC = serial $ fn
+            where fn serialized = x `deepseq` return (serial x)
+                    where x = deserial serialized
+
 ------------------------------------------------------------------------------
 -- strategies for lists
 
