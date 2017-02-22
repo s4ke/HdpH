@@ -57,8 +57,6 @@ module Control.Parallel.HdpH
     -- * Runtime system configuration
     module Control.Parallel.HdpH.Conf,
 
-    -- * This module's Static declaration
-    declareStatic
   ) where
 
 import Prelude hiding (error, lookup)
@@ -95,6 +93,9 @@ import Control.Parallel.HdpH.Internal.Threadpool (putThread, putThreads)
 import Control.Parallel.HdpH.Internal.Type.Par
        (ParM(Par), Thread(Atom), ThreadCont(ThreadCont, ThreadDone))
 
+import GHC.Packing.Type
+import Control.Parallel.HdpH.SerialUtil
+
 
 -----------------------------------------------------------------------------
 -- $Intro
@@ -122,7 +123,6 @@ import Control.Parallel.HdpH.Internal.Type.Par
 -- allows the replication of computations, and the racing of computations
 -- against each other. The price to pay for these features is that HdpH
 -- cannot enforce determinism.
-
 
 -----------------------------------------------------------------------------
 -- abstract locations and distance metric
@@ -269,8 +269,8 @@ runParIO_ conf p =
   runRTS_ conf $ do isMain <- isMainRTS
                     when isMain $ do
                       -- print Static table
-                      liftIO $ Location.debug Location.dbgStaticTab $ unlines $
-                        "" : map ("  " ++) showStaticTable
+                      --liftIO $ Location.debug Location.dbgStaticTab $ unlines $
+                      --  "" : map ("  " ++) showStaticTable
                       runPar p
 
 
@@ -362,8 +362,8 @@ allNodesWithin r = do
   rest_nodes <- mapM (fmap deserial . get) vs
   return $ serial $ concat (near_nodes : rest_nodes)
 
-allNodesWithin_abs :: (Dist, GIVar (Serialized [Node])) -> Thunk (Par ())
-allNodesWithin_abs (half_r, gv) = Thunk $ allNodesWithin half_r >>= rput gv
+allNodesWithin_abs :: (Dist, GIVar (Serialized [Node])) -> Par ()
+allNodesWithin_abs (half_r, gv) = allNodesWithin half_r >>= rput gv
               
 -- | Returns an equidistant basis of radius 'r' around the current node.
 --   By convention, the head of the list is the current node.
@@ -413,8 +413,8 @@ spawnAt q clo = do
   pushTo (serial $ spawn_abs (clo, gv)) q
   return v
 
-spawn_abs :: (Serialized(Par (Serializeda)), GIVar (Serialized a)) -> Thunk (Par ())
-spawn_abs (clo, gv) = Thunk $ deserial clo >>= rput gv
+spawn_abs :: (Serialized(Par (Serialized a)), GIVar (Serialized a)) -> Par ()
+spawn_abs (clo, gv) = deserial clo >>= rput gv
 
 -- | Creates a new empty IVar.
 new :: Par (IVar a)
@@ -458,10 +458,10 @@ rput :: GIVar (Serialized a) -> Serialized a -> Par ()
 rput gv clo = pushTo (serial $ rput_abs (gv, clo)) (at gv)
 
 -- write to locally hosted global IVar; don't export
-rput_abs :: (GIVar (Serialized a), Serialized a) -> Thunk (Par ())
+rput_abs :: (GIVar (Serialized a), Serialized a) -> Par ()
 {-# INLINE rput_abs #-}
 rput_abs (GIVar gv, clo) =
-  Thunk $ atomMayInjectHi $ const $
+  atomMayInjectHi $ const $
     schedulerID >>= \ i ->
     liftIO (putGIVar i gv clo) >>= \ (hts, lts) ->
     liftThreadM $ putThreads lts >>

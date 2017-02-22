@@ -36,7 +36,7 @@ import qualified Data.ByteString.Lazy as BS
 import Data.Functor ((<$>))
 
 import GHC.Packing.Type
-import Control.Parallel.HdpH.SerialUtil(deserial)
+import Control.Parallel.HdpH.SerialUtil
 
 import Control.Parallel.HdpH.Conf (RTSConf(scheds, wakeupDly))
 import qualified Control.Parallel.HdpH.Internal.Comm as Comm
@@ -143,7 +143,7 @@ run_ conf main = do
         when is_root $ do
           -- root: send TERM msg to all nodes to lift termination barrier
           everywhere <- liftIO Comm.allNodes
-          let term_msg = encodeLazy (TERM me)
+          let term_msg = encodeLazy (TERM me :: Msg IO)
           liftIO $ mapM_ (\ node -> Comm.send node term_msg) everywhere
 
         -- all nodes: block waiting for termination barrier
@@ -265,7 +265,7 @@ sendPUSH spark target = do
   if target == here
     then do
       -- short cut PUSH msg locally
-      execHiThread $ mkThread $ serial spark
+      execHiThread $ mkThread $ deserial spark
     else do
       -- construct and send PUSH message
       let msg = PUSH spark :: Msg RTS

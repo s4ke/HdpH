@@ -1,5 +1,6 @@
 module Control.Parallel.HdpH.SerialUtil(
-    deserialize
+    deserial,
+    serial
 ) where
 
 import GHC.Packing.Core

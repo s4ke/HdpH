@@ -145,16 +145,16 @@ liftIO = lift
 -----------------------------------------------------------------------------
 -- access to state
 
-getPool :: (Typeable m) => Dist -> SparkM m (DequeIO (Spark m))
+getPool :: Dist -> SparkM m (DequeIO (Spark m))
 getPool r = DistMap.lookup r . s_pools <$> ask
 
-readPoolSize :: (Typeable m) => Dist -> SparkM m Int
+readPoolSize :: Dist -> SparkM m Int
 readPoolSize r = getPool r >>= liftIO . lengthIO
 
-getSparkOrigHist :: (Typeable m) => SparkM m (IORef (Maybe Node))
+getSparkOrigHist :: SparkM m (IORef (Maybe Node))
 getSparkOrigHist = s_sparkOrig <$> ask
 
-readSparkOrigHist :: (Typeable m) => SparkM m (Maybe Node)
+readSparkOrigHist :: SparkM m (Maybe Node)
 readSparkOrigHist = do
   useLastSteal <- useLastStealOptimisation <$> s_conf <$> ask
   if useLastSteal
@@ -162,75 +162,75 @@ readSparkOrigHist = do
    else return Nothing
 
 
-setSparkOrigHist :: (Typeable m) => Node -> SparkM m ()
+setSparkOrigHist :: Node -> SparkM m ()
 setSparkOrigHist mostRecentOrigin = do
   sparkOrigHistRef <- getSparkOrigHist
   liftIO $ writeIORef sparkOrigHistRef (Just mostRecentOrigin)
 
-clearSparkOrigHist :: (Typeable m) => SparkM m ()
+clearSparkOrigHist :: SparkM m ()
 clearSparkOrigHist = do
   sparkOrigHistRef <- getSparkOrigHist
   liftIO $ writeIORef sparkOrigHistRef Nothing
 
-getFishingFlag :: (Typeable m) => SparkM m (IORef Bool)
+getFishingFlag :: SparkM m (IORef Bool)
 getFishingFlag = s_fishing <$> ask
 
-getNoWorkServer :: (Typeable m) => SparkM m ActionServer
+getNoWorkServer :: SparkM m ActionServer
 getNoWorkServer = s_noWork <$> ask
   
-getIdleSchedsSem :: (Typeable m) => SparkM m Sem
+getIdleSchedsSem :: SparkM m Sem
 getIdleSchedsSem = s_idleScheds <$> ask
 
-getFishSentCtr :: (Typeable m) => SparkM m (IORef Int)
+getFishSentCtr :: SparkM m (IORef Int)
 getFishSentCtr = s_fishSent <$> ask
 
-readFishSentCtr :: (Typeable m) => SparkM m Int
+readFishSentCtr :: SparkM m Int
 readFishSentCtr = getFishSentCtr >>= readCtr
 
-getSparkRcvdCtr :: (Typeable m) => SparkM m (IORef Int)
+getSparkRcvdCtr :: SparkM m (IORef Int)
 getSparkRcvdCtr = s_sparkRcvd <$> ask
 
-readSparkRcvdCtr :: (Typeable m) => SparkM m Int
+readSparkRcvdCtr :: SparkM m Int
 readSparkRcvdCtr = getSparkRcvdCtr >>= readCtr
 
-getSparkGenCtr :: (Typeable m) => SparkM m (IORef Int)
+getSparkGenCtr :: SparkM m (IORef Int)
 getSparkGenCtr = s_sparkGen <$> ask
 
-readSparkGenCtr :: (Typeable m) => SparkM m Int
+readSparkGenCtr :: SparkM m Int
 readSparkGenCtr = getSparkGenCtr >>= readCtr
 
-getSparkConvCtr :: (Typeable m) => SparkM m (IORef Int)
+getSparkConvCtr :: SparkM m (IORef Int)
 getSparkConvCtr = s_sparkConv <$> ask
 
-readSparkConvCtr :: (Typeable m) => SparkM m Int
+readSparkConvCtr :: SparkM m Int
 readSparkConvCtr = getSparkConvCtr >>= readCtr
 
-readMaxSparkCtr :: (Typeable m) => Dist -> SparkM m Int
+readMaxSparkCtr :: Dist -> SparkM m Int
 readMaxSparkCtr r = getPool r >>= liftIO . maxLengthIO
 
-readMaxSparkCtrs :: (Typeable m) => SparkM m [Int]
+readMaxSparkCtrs :: SparkM m [Int]
 readMaxSparkCtrs = liftIO getDistsIO >>= mapM readMaxSparkCtr
 
-getMaxHops :: (Typeable m) => SparkM m Int
+getMaxHops :: SparkM m Int
 getMaxHops = maxHops <$> s_conf <$> ask
 
-getMaxFish :: (Typeable m) => SparkM m Int
+getMaxFish :: SparkM m Int
 getMaxFish = maxFish <$> s_conf <$> ask
 
-getMinSched :: (Typeable m) => SparkM m Int
+getMinSched :: SparkM m Int
 getMinSched = minSched <$> s_conf <$> ask
 
-getMinFishDly :: (Typeable m) => SparkM m Int
+getMinFishDly :: SparkM m Int
 getMinFishDly = minFishDly <$> s_conf <$> ask
 
-getMaxFishDly :: (Typeable m) => SparkM m Int
+getMaxFishDly :: SparkM m Int
 getMaxFishDly = maxFishDly <$> s_conf <$> ask
 
 
 -----------------------------------------------------------------------------
 -- access to Comm module state
 
-singleNode :: (Typeable m) => SparkM m Bool
+singleNode ::SparkM m Bool
 singleNode = (< 2) <$> liftIO Comm.nodes
 
 getEquiDistBasesIO :: IO (DistMap [(Node, Int)])
@@ -247,12 +247,12 @@ getMinDistIO = DistMap.minDist <$> Comm.equiDistBases
 -- blocking and unblocking idle schedulers
 
 -- Put executing scheduler to sleep.
-blockSched :: (Typeable m) => SparkM m ()
+blockSched :: SparkM m ()
 blockSched = getIdleSchedsSem >>= liftIO . Sem.wait
 
 
 -- Wake up 'n' sleeping schedulers.
-wakeupSched :: (Typeable m) => Int -> SparkM m ()
+wakeupSched :: Int -> SparkM m ()
 wakeupSched n = getIdleSchedsSem >>= liftIO . replicateM_ n . Sem.signal
 
 
@@ -262,7 +262,7 @@ wakeupSched n = getIdleSchedsSem >>= liftIO . replicateM_ n . Sem.signal
 -- Local spark selection policy (pick sparks from back of queue),
 -- starting from radius 'r' and and rippling outwords;
 -- the scheduler ID may be used for logging.
-selectLocalSpark :: (Typeable m) => Int -> Dist -> SparkM m (Maybe (Spark m, Dist))
+selectLocalSpark :: Int -> Dist -> SparkM m (Maybe (Spark m, Dist))
 selectLocalSpark schedID !r = do
   pool <- getPool r
   maybe_spark <- liftIO $ popBackIO pool
@@ -342,7 +342,7 @@ getLocalSpark schedID = do
 -- Put a new spark at the back of the spark pool at radius 'r', wake up
 -- 1 sleeping scheduler, and update stats (ie. count sparks generated locally);
 -- the scheduler ID argument may be used for logging.
-putLocalSpark :: (Typeable m) => Int -> Dist -> Spark m -> SparkM m ()
+putLocalSpark :: Int -> Dist -> Spark m -> SparkM m ()
 putLocalSpark _schedID r spark = do
   pool <- getPool r
   liftIO $ pushBackIO pool spark
@@ -355,7 +355,7 @@ putLocalSpark _schedID r spark = do
 -- Put received spark at the back of the spark pool at radius 'r', wake up
 -- 1 sleeping scheduler, and update stats (ie. count sparks received);
 -- schedID (expected to be msg handler ID 0) may be used for logging.
-putRemoteSpark :: (Typeable m) => Int -> Dist -> Spark m -> SparkM m ()
+putRemoteSpark :: Int -> Dist -> Spark m -> SparkM m ()
 putRemoteSpark _schedID r spark = do
   pool <- getPool r
   liftIO $ pushBackIO pool spark
@@ -521,14 +521,9 @@ sendFISH r_min = do
 
       maybe_src <- readSparkOrigHist
 
-      -- compose FISH message
-      let (target, msg) =
-            case maybe_src of
-              Just src -> (src, FISH thief [] candidates [] False)
-              Nothing  ->
-                case candidates of
-                  cand:cands -> (cand, FISH thief [] cands [] True)
-                  []         -> (thief, NOWORK)  -- no candidates --> NOWORK
+       -- compose FISH message
+      let (target, msg) = (myfn maybe_src thief candidates)
+
       -- send FISH (or NOWORK) message
       debug dbgMsgSend $ let msg_size = BS.length (encodeLazy msg) in
         show msg ++ " ->> " ++ show target ++ " Length: " ++ show msg_size
@@ -536,6 +531,14 @@ sendFISH r_min = do
       case msg of
         FISH _ _ _ _ _ -> getFishSentCtr >>= incCtr  -- update stats
         _              -> return ()
+    where
+      myfn :: (Maybe Node) -> Node -> [Node] -> (Node, Msg IO)
+      myfn maybe_src thief candidates = case maybe_src of
+               Just src -> (src, FISH thief [] candidates [] False)
+               Nothing  ->
+                 case candidates of
+                   cand:cands -> (cand, FISH thief [] cands [] True)
+                   []         -> (thief, NOWORK)  -- no candidates --> NOWORK
 
 -- Return up to 'n' random candidates drawn from the equidistant bases,
 -- excluding the current node and sorted in order of ascending distance.
@@ -664,22 +667,22 @@ spineList []     = ()
 spineList (_:xs) = spineList xs
 
 
-readFlag :: (Typeable m) => IORef Bool -> SparkM m Bool
+readFlag :: IORef Bool -> SparkM m Bool
 readFlag = liftIO . readIORef
 
 -- Sets given 'flag'; returns True iff 'flag' did actually change.
-setFlag :: (Typeable m) => IORef Bool -> SparkM m Bool
+setFlag :: IORef Bool -> SparkM m Bool
 setFlag flag = liftIO $ atomicModifyIORef flag $ \ v -> (True, not v)
 
 -- Clears given 'flag'; returns True iff 'flag' did actually change.
-clearFlag :: (Typeable m) => IORef Bool -> SparkM m Bool
+clearFlag :: IORef Bool -> SparkM m Bool
 clearFlag flag = liftIO $ atomicModifyIORef flag $ \ v -> (False, v)
 
 
-readCtr :: (Typeable m) => IORef Int -> SparkM m Int
+readCtr :: IORef Int -> SparkM m Int
 readCtr = liftIO . readIORef
 
-incCtr :: (Typeable m) => IORef Int -> SparkM m ()
+incCtr :: IORef Int -> SparkM m ()
 incCtr ctr = liftIO $ atomicModifyIORef ctr $ \ v ->
                         let v' = v + 1 in v' `seq` (v', ())
 
@@ -701,5 +704,5 @@ uniqRandomsRR n universes =
 
 
 -- debugging
-debug :: (Typeable m) => Int -> String -> SparkM m ()
+debug :: Int -> String -> SparkM m ()
 debug level message = liftIO $ Location.debug level message
