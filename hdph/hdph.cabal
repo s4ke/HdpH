@@ -1,5 +1,5 @@
 name:          hdph
-version:       0.2.3
+version:       0.3.0.0
 synopsis:      Haskell distributed parallel Haskell
 description:   Haskell distributed parallel Haskell (HdpH) is a Haskell DSL
                for distributed-memory parallelism, implemented entirely in
@@ -12,7 +12,7 @@ author:        Patrick Maier <C.Patrick.Maier@gmail.com>,
 maintainer:    Patrick Maier <C.Patrick.Maier@gmail.com>
 stability:     experimental
 category:      Control, Parallelism, Distributed Computing, Monads
-tested-with:   GHC == 7.6.3 || == 7.8.2
+tested-with:   GHC == 7.10.3
 build-type:    Simple
 cabal-version: >= 1.8
 Library
