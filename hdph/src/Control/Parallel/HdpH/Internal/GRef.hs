@@ -147,8 +147,9 @@ globalise x = do
 free :: GRef a -> IO ()
 free ref = do
   refIsLocal <- isLocal ref
+  me <- myNode
   unless refIsLocal $
-    error $ "HdpH.Internal.GRef.free: " ++ show ref ++ " not local"
+    error $ "HdpH.Internal.GRef.free: " ++ show ref ++ " not local. myNode is " ++ (show me)
   _ <- forkIO $ do debug dbgGRef $ "GRef.free " ++ show ref
                    atomicModifyIORef regRef (deleteEntry $ slot ref)
   return ()
