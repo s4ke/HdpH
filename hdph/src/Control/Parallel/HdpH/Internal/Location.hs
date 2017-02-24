@@ -142,6 +142,7 @@ allNodes = readIORef allNodesRef
 
 -- Abort with error 'message'.
 error :: String -> a
+{-# NOINLINE error #-}
 error message = case unsafePerformIO myNode' of
                   Just node -> Prelude.error (show node ++ " " ++ message)
                   Nothing   -> Prelude.error message
